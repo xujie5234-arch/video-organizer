@@ -259,7 +259,7 @@ def load_cd2_config():
     if os.path.exists(CD2_CONFIG_FILE):
         with open(CD2_CONFIG_FILE, 'r') as f:
             return json.load(f)
-    return {'url': 'http://127.0.0.1:19766', 'token': ''}
+    return {'url': 'http://127.0.0.1:19798', 'token': ''}
 
 def save_cd2_config(config):
     """保存 cd2 配置"""

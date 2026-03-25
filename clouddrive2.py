@@ -10,7 +10,7 @@ from typing import Dict, List, Optional
 class CloudDrive2:
     """CloudDrive2 API 客户端"""
     
-    def __init__(self, base_url: str = 'http://127.0.0.1:19766', token: str = ''):
+    def __init__(self, base_url: str = 'http://127.0.0.1:19798', token: str = ''):
         self.base_url = base_url.rstrip('/')
         self.session = requests.Session()
         if token:
