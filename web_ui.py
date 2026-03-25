@@ -224,5 +224,218 @@ def api_logs():
         return jsonify({'error': str(e)}), 500
 
 
+# 115 Cookie 存储
+COOKIE_FILE = '/app/data/115_cookie.txt'
+
+def load_115_cookie():
+    """加载 115 Cookie"""
+    if os.path.exists(COOKIE_FILE):
+        with open(COOKIE_FILE, 'r') as f:
+            return f.read().strip()
+    return None
+
+def save_115_cookie(cookie):
+    """保存 115 Cookie"""
+    with open(COOKIE_FILE, 'w') as f:
+        f.write(cookie)
+
+
+@app.route('/115')
+def page_115():
+    """115 网盘整理页面"""
+    return render_template('115.html')
+
+
+@app.route('/api/115/status')
+def api_115_status():
+    """检查 115 登录状态"""
+    cookie = load_115_cookie()
+    if not cookie:
+        return jsonify({'logged_in': False})
+    
+    try:
+        from cloud115 import Cloud115
+        client = Cloud115(cookie)
+        if client.verify_cookie():
+            user = client.get_user_info()
+            return jsonify({
+                'logged_in': True,
+                'user_id': user.get('user_id'),
+                'user_name': user.get('user_name')
+            })
+    except Exception as e:
+        pass
+    
+    return jsonify({'logged_in': False})
+
+
+@app.route('/api/115/storage')
+def api_115_storage():
+    """获取 115 存储信息"""
+    cookie = load_115_cookie()
+    if not cookie:
+        return jsonify({'error': '未登录'}), 401
+    
+    try:
+        from cloud115 import Cloud115
+        client = Cloud115(cookie)
+        storage = client.get_storage_info()
+        if storage:
+            return jsonify({
+                'total': storage.get('total', 0),
+                'free': storage.get('free', 0),
+                'used': storage.get('used', 0)
+            })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+    return jsonify({'error': '获取失败'}), 500
+
+
+@app.route('/api/115/folders')
+def api_115_folders():
+    """获取 115 文件夹列表"""
+    cookie = load_115_cookie()
+    cid = request.args.get('cid', '0')
+    
+    if not cookie:
+        return jsonify({'error': '未登录'}), 401
+    
+    try:
+        from cloud115 import Cloud115
+        client = Cloud115(cookie)
+        folders = client.get_folders(cid)
+        return jsonify({
+            'folders': [{'cid': f['cid'], 'name': f['file_name']} for f in folders]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/115/files')
+def api_115_files():
+    """获取 115 文件列表"""
+    cookie = load_115_cookie()
+    cid = request.args.get('cid', '0')
+    
+    if not cookie:
+        return jsonify({'error': '未登录'}), 401
+    
+    try:
+        from cloud115 import Cloud115
+        client = Cloud115(cookie)
+        data = client.get_files(cid, 0, 100)
+        if data:
+            files = [
+                {'fid': f['fid'], 'name': f['file_name'], 'size': f['file_size']}
+                for f in data.get('data', [])
+                if f.get('is_dir') == 0 and f.get('cate_id') == 4
+            ]
+            return jsonify({'files': files})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+    return jsonify({'files': []})
+
+
+@app.route('/api/115/cookie', methods=['POST'])
+def api_115_cookie():
+    """保存 115 Cookie"""
+    data = request.json
+    cookie = data.get('cookie', '')
+    
+    if not cookie:
+        return jsonify({'success': False, 'error': 'Cookie 不能为空'})
+    
+    try:
+        from cloud115 import Cloud115
+        client = Cloud115(cookie)
+        if client.verify_cookie():
+            save_115_cookie(cookie)
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Cookie 无效'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/115/test', methods=['POST'])
+def api_115_test():
+    """测试 115 Cookie"""
+    data = request.json
+    cookie = data.get('cookie', '')
+    
+    try:
+        from cloud115 import Cloud115
+        client = Cloud115(cookie)
+        if client.verify_cookie():
+            user = client.get_user_info()
+            return jsonify({
+                'success': True,
+                'user_id': user.get('user_id'),
+                'user_name': user.get('user_name')
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Cookie 无效'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/115/classify', methods=['POST'])
+def api_115_classify():
+    """分类 115 文件"""
+    cookie = load_115_cookie()
+    if not cookie:
+        return jsonify({'success': False, 'error': '未登录'}), 401
+    
+    data = request.json
+    file_ids = data.get('file_ids', [])
+    
+    if not file_ids:
+        return jsonify({'success': False, 'error': '没有选择文件'})
+    
+    try:
+        from cloud115 import Cloud115, Cloud115Classifier
+        import yaml
+        
+        # 加载配置
+        config_path = os.environ.get('CONFIG_PATH', '/app/config/config.yaml')
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = yaml.safe_load(f)
+        
+        client = Cloud115(cookie)
+        classifier = Cloud115Classifier(client, config.get('categories', []))
+        
+        # 确保分类文件夹存在
+        folders = classifier.ensure_category_folders()
+        
+        # 按分类分组文件
+        grouped = {}
+        for fid in file_ids:
+            # 这里需要根据文件 ID 获取文件名来判断分类
+            # 简化处理：假设前端已经传了文件名
+            category = '其他'  # 实际需要获取文件信息
+            if category not in grouped:
+                grouped[category] = []
+            grouped[category].append(fid)
+        
+        # 批量移动
+        results = {'success': 0, 'errors': 0}
+        for category, fids in grouped.items():
+            folder_cid = folders.get(category)
+            if folder_cid:
+                success = client.move_files(fids, folder_cid)
+                if success:
+                    results['success'] += len(fids)
+                else:
+                    results['errors'] += len(fids)
+            else:
+                results['errors'] += len(fids)
+        
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)

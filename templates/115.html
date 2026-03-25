@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📂 115 网盘整理 - Media Organizer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 20px; }
+        .nav { display: flex; gap: 10px; margin-bottom: 20px; }
+        .nav a { padding: 10px 20px; background: white; border-radius: 5px; text-decoration: none; color: #333; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .nav a:hover { background: #667eea; color: white; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .storage-info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; }
+        .storage-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; }
+        .storage-value { font-size: 2em; font-weight: bold; margin: 10px 0; }
+        .storage-label { opacity: 0.9; }
+        .progress-bar { height: 10px; background: rgba(255,255,255,0.3); border-radius: 5px; overflow: hidden; margin-top: 10px; }
+        .progress-fill { height: 100%; background: white; transition: width 0.3s; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1em; }
+        .form-group small { color: #666; font-size: 0.85em; }
+        .btn { padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; font-weight: bold; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-success { background: #48bb78; color: white; }
+        .btn-danger { background: #f56565; color: white; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .status { padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .status-success { background: #c6f6d5; color: #22543d; }
+        .status-error { background: #fed7d7; color: #742a2a; }
+        .status-warning { background: #feebc8; color: #744210; }
+        .folder-tree { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; padding: 15px; }
+        .folder-item { padding: 10px; cursor: pointer; border-radius: 5px; margin-bottom: 5px; display: flex; align-items: center; }
+        .folder-item:hover { background: #f0f0f0; }
+        .folder-item.active { background: #667eea; color: white; }
+        .file-list { max-height: 400px; overflow-y: auto; }
+        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
+        .checkbox { margin-right: 10px; }
+        .alert { padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .alert-info { background: #bee3f8; color: #2c5282; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📂 115 网盘整理</h1>
+            <p>直接在 115 网盘内整理视频文件</p>
+        </div>
+
+        <div class="nav">
+            <a href="/">📊 概览</a>
+            <a href="/115" style="background: #667eea; color: white;">☁️ 115 整理</a>
+            <a href="/config">⚙️ 配置</a>
+            <a href="/logs">📋 日志</a>
+        </div>
+
+        <div id="message"></div>
+
+        <!-- 登录状态 -->
+        <div class="card" id="login-card">
+            <h2>🔐 115 登录</h2>
+            <div id="login-status"></div>
+            
+            <div class="form-group">
+                <label>115 Cookie</label>
+                <textarea id="cookie-input" rows="3" placeholder="请输入 115 网盘的 Cookie（按 F12 在浏览器开发者工具中获取）"></textarea>
+                <small>获取方法：登录 115 网盘 → 按 F12 → Network → 刷新页面 → 复制请求头中的 Cookie</small>
+            </div>
+            
+            <button class="btn btn-primary" onclick="saveCookie()">💾 保存 Cookie</button>
+            <button class="btn btn-success" onclick="testConnection()" style="margin-left: 10px;">🧪 测试连接</button>
+        </div>
+
+        <!-- 存储状态 -->
+        <div class="card" id="storage-card" style="display: none; margin-top: 20px;">
+            <h2>💾 存储状态</h2>
+            <div class="storage-info" id="storage-info"></div>
+        </div>
+
+        <!-- 文件夹选择 -->
+        <div class="grid" id="folder-section" style="display: none; margin-top: 20px;">
+            <div class="card">
+                <h2>📁 源文件夹</h2>
+                <div class="folder-tree" id="source-folders"></div>
+            </div>
+            
+            <div class="card">
+                <h2>📂 文件列表</h2>
+                <div style="margin-bottom: 15px;">
+                    <button class="btn btn-success" onclick="classifySelected()" id="classify-btn" disabled>
+                        📂 批量分类选中文件
+                    </button>
+                    <button class="btn btn-primary" onclick="loadFiles()" style="margin-left: 10px;">
+                        🔄 刷新
+                    </button>
+                </div>
+                <div class="file-list" id="file-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFolder = '0';
+        let selectedFiles = [];
+
+        // 检查登录状态
+        async function checkLogin() {
+            try {
+                const res = await fetch('/api/115/status');
+                const data = await res.json();
+                
+                if (data.logged_in) {
+                    document.getElementById('login-status').innerHTML = `
+                        <div class="status status-success">
+                            ✅ 已登录：${data.user_name || '未知用户'}
+                        </div>
+                    `;
+                    document.getElementById('storage-card').style.display = 'block';
+                    document.getElementById('folder-section').style.display = 'grid';
+                    loadStorageInfo();
+                    loadFolders();
+                } else {
+                    document.getElementById('login-status').innerHTML = `
+                        <div class="status status-warning">
+                            ⚠️ 未登录，请输入 Cookie
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                document.getElementById('login-status').innerHTML = `
+                    <div class="status status-error">
+                        ❌ 检查登录状态失败：${e}
+                    </div>
+                `;
+            }
+        }
+
+        // 加载存储信息
+        async function loadStorageInfo() {
+            try {
+                const res = await fetch('/api/115/storage');
+                const data = await res.json();
+                
+                const used = (data.total - data.free) / data.total * 100;
+                
+                document.getElementById('storage-info').innerHTML = `
+                    <div class="storage-card">
+                        <div class="storage-label">总容量</div>
+                        <div class="storage-value">${formatSize(data.total)}</div>
+                    </div>
+                    <div class="storage-card">
+                        <div class="storage-label">已使用</div>
+                        <div class="storage-value">${formatSize(data.total - data.free)}</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${used}%"></div>
+                        </div>
+                    </div>
+                    <div class="storage-card">
+                        <div class="storage-label">剩余</div>
+                        <div class="storage-value">${formatSize(data.free)}</div>
+                    </div>
+                `;
+            } catch (e) {
+                console.error('加载存储信息失败:', e);
+            }
+        }
+
+        // 加载文件夹
+        async function loadFolders() {
+            try {
+                const res = await fetch('/api/115/folders?cid=' + currentFolder);
+                const data = await res.json();
+                
+                const container = document.getElementById('source-folders');
+                if (data.folders && data.folders.length > 0) {
+                    container.innerHTML = data.folders.map(f => `
+                        <div class="folder-item" onclick="openFolder('${f.cid}', this)">
+                            📁 ${f.name}
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div style="text-align:center;color:#999;">根目录</div>';
+                }
+            } catch (e) {
+                console.error('加载文件夹失败:', e);
+            }
+        }
+
+        // 打开文件夹
+        async function openFolder(cid, element) {
+            currentFolder = cid;
+            document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('active'));
+            if (element) element.classList.add('active');
+            loadFiles();
+        }
+
+        // 加载文件
+        async function loadFiles() {
+            try {
+                const res = await fetch('/api/115/files?cid=' + currentFolder);
+                const data = await res.json();
+                
+                const container = document.getElementById('file-list');
+                if (data.files && data.files.length > 0) {
+                    selectedFiles = data.files;
+                    container.innerHTML = data.files.map(f => `
+                        <div class="file-item">
+                            <div style="display:flex;align-items:center;">
+                                <input type="checkbox" class="checkbox" value="${f.fid}" checked>
+                                <span>🎬 ${f.name}</span>
+                            </div>
+                            <span style="color:#666;">${formatSize(f.size)}</span>
+                        </div>
+                    `).join('');
+                    document.getElementById('classify-btn').disabled = false;
+                } else {
+                    container.innerHTML = '<div style="text-align:center;color:#999;">没有视频文件</div>';
+                    document.getElementById('classify-btn').disabled = true;
+                }
+            } catch (e) {
+                console.error('加载文件失败:', e);
+            }
+        }
+
+        // 保存 Cookie
+        async function saveCookie() {
+            const cookie = document.getElementById('cookie-input').value.trim();
+            if (!cookie) {
+                showMessage('请输入 Cookie', 'error');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/115/cookie', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cookie })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showMessage('✅ Cookie 保存成功！', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showMessage('❌ 保存失败：' + (data.error || '未知错误'), 'error');
+                }
+            } catch (e) {
+                showMessage('❌ 保存失败：' + e, 'error');
+            }
+        }
+
+        // 测试连接
+        async function testConnection() {
+            const cookie = document.getElementById('cookie-input').value.trim();
+            if (!cookie) {
+                showMessage('请输入 Cookie', 'error');
+                return;
+            }
+            
+            showMessage('🧪 测试连接中...', 'info');
+            
+            try {
+                const res = await fetch('/api/115/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cookie })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showMessage('✅ 连接成功！用户：' + (data.user_name || '未知'), 'success');
+                } else {
+                    showMessage('❌ 连接失败：Cookie 可能已过期', 'error');
+                }
+            } catch (e) {
+                showMessage('❌ 测试失败：' + e, 'error');
+            }
+        }
+
+        // 批量分类
+        async function classifySelected() {
+            const checkboxes = document.querySelectorAll('.checkbox:checked');
+            const fileIds = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (fileIds.length === 0) {
+                showMessage('请先选择文件', 'error');
+                return;
+            }
+            
+            if (!confirm(`确定要分类 ${fileIds.length} 个文件吗？`)) return;
+            
+            const btn = document.getElementById('classify-btn');
+            btn.disabled = true;
+            btn.textContent = '分类中...';
+            
+            try {
+                const res = await fetch('/api/115/classify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_ids: fileIds })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showMessage(`✅ 分类完成！成功：${data.success}, 失败：${data.errors}`, 'success');
+                    setTimeout(() => loadFiles(), 2000);
+                } else {
+                    showMessage('❌ 分类失败：' + (data.error || '未知错误'), 'error');
+                }
+            } catch (e) {
+                showMessage('❌ 分类失败：' + e, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📂 批量分类选中文件';
+            }
+        }
+
+        function showMessage(text, type) {
+            const msg = document.getElementById('message');
+            msg.innerHTML = `<div class="alert alert-${type}">${text}</div>`;
+        }
+
+        function formatSize(bytes) {
+            if (!bytes) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // 页面加载
+        checkLogin();
+    </script>
+</body>
+</html>
