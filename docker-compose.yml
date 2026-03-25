@@ -22,6 +22,9 @@ services:
       
       # 数据库持久化
       - ./data/db:/app/data
+      
+      # 更新脚本
+      - ./update.sh:/app/update.sh
     
     ports:
       - "5000:5000"  # Web UI 访问端口

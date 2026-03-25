@@ -11,8 +11,10 @@ from pathlib import Path
 from scanner import VideoScanner
 from classifier import Classifier
 from database import MediaDatabase
+from update_manager import update_bp
 
 app = Flask(__name__)
+app.register_blueprint(update_bp, url_prefix='/update')
 
 # 配置
 CONFIG_PATH = os.environ.get('CONFIG_PATH', '/app/config/config.yaml')
@@ -34,6 +36,11 @@ def index():
     db = MediaDatabase('/app/data/media.db')
     stats = db.get_stats()
     return render_template('index.html', stats=stats)
+
+@app.route('/update')
+def update_page():
+    """更新管理页面"""
+    return render_template('update.html')
 
 
 @app.route('/files')

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔄 系统更新 - Media Organizer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 20px; }
+        .nav { display: flex; gap: 10px; margin-bottom: 20px; }
+        .nav a { padding: 10px 20px; background: white; border-radius: 5px; text-decoration: none; color: #333; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .nav a:hover { background: #667eea; color: white; }
+        .card { background: white; border-radius: 10px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .version-info { display: flex; justify-content: space-between; align-items: center; padding: 20px; background: #f8f9fa; border-radius: 10px; margin-bottom: 20px; }
+        .version-number { font-size: 1.2em; font-weight: bold; color: #333; }
+        .update-badge { background: #48bb78; color: white; padding: 5px 15px; border-radius: 20px; font-size: 0.9em; }
+        .update-badge.none { background: #cbd5e0; }
+        .btn { padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; font-weight: bold; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5568d3; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .log { background: #1a202c; color: #48bb78; padding: 20px; border-radius: 10px; font-family: monospace; max-height: 400px; overflow-y: auto; white-space: pre-wrap; }
+        .progress { margin: 20px 0; }
+        .progress-bar { height: 30px; background: #e2e8f0; border-radius: 15px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); width: 0%; transition: width 0.3s; }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .alert { padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .alert-info { background: #bee3f8; color: #2c5282; }
+        .alert-success { background: #c6f6d5; color: #22543d; }
+        .alert-error { background: #fed7d7; color: #742a2a; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔄 系统更新</h1>
+            <p>检查并安装最新版本</p>
+        </div>
+
+        <div class="nav">
+            <a href="/">📊 概览</a>
+            <a href="/files">📁 文件管理</a>
+            <a href="/config">⚙️ 配置</a>
+            <a href="/update" style="background: #667eea; color: white;">🔄 更新</a>
+        </div>
+
+        <div class="card">
+            <div class="version-info">
+                <div>
+                    <div style="color: #666; margin-bottom: 5px;">当前版本</div>
+                    <div class="version-number" id="current-version">检查中...</div>
+                </div>
+                <div id="update-badge" class="update-badge none">无更新</div>
+            </div>
+
+            <div id="update-available" class="alert alert-info" style="display: none;">
+                🎉 发现新版本！点击"立即更新"进行升级。
+            </div>
+
+            <button class="btn btn-primary" id="update-btn" onclick="checkUpdates()" style="width: 100%;">
+                🔍 检查更新
+            </button>
+
+            <button class="btn btn-primary" id="do-update-btn" onclick="doUpdate()" style="width: 100%; display: none; margin-top: 10px; background: #48bb78;">
+                🚀 立即更新
+            </button>
+        </div>
+
+        <div class="progress" id="progress" style="display: none;">
+            <p>更新进度：</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+        </div>
+
+        <div class="log" id="log" style="display: none;">
+            <div id="log-content"></div>
+        </div>
+    </div>
+
+    <script>
+        let hasUpdate = false;
+
+        async function checkUpdates() {
+            const btn = document.getElementById('update-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>检查中...';
+
+            try {
+                const res = await fetch('/api/version');
+                const data = await res.json();
+                
+                document.getElementById('current-version').textContent = data.version || 'unknown';
+                
+                const badge = document.getElementById('update-badge');
+                if (data.updates_available > 0) {
+                    badge.textContent = `${data.updates_available} 个更新可用`;
+                    badge.classList.remove('none');
+                    document.getElementById('update-available').style.display = 'block';
+                    document.getElementById('do-update-btn').style.display = 'block';
+                    hasUpdate = true;
+                } else {
+                    badge.textContent = '已是最新版本';
+                    badge.classList.add('none');
+                    document.getElementById('update-available').style.display = 'none';
+                    document.getElementById('do-update-btn').style.display = 'none';
+                    hasUpdate = false;
+                }
+            } catch (e) {
+                alert('检查更新失败：' + e);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🔍 检查更新';
+            }
+        }
+
+        async function doUpdate() {
+            if (!confirm('确定要更新到最新版本吗？\n\n更新过程约 1-2 分钟，期间服务会短暂中断。')) return;
+
+            document.getElementById('progress').style.display = 'block';
+            document.getElementById('log').style.display = 'block';
+            document.getElementById('update-btn').disabled = true;
+            document.getElementById('do-update-btn').disabled = true;
+
+            const logContent = document.getElementById('log-content');
+            logContent.textContent = '开始更新...\n';
+
+            try {
+                const res = await fetch('/api/update', { method: 'POST' });
+                const data = await res.json();
+
+                logContent.textContent += data.output || '';
+                if (data.error) {
+                    logContent.textContent += '\n错误：' + data.error;
+                }
+
+                document.getElementById('progress-fill').style.width = '100%';
+
+                if (data.success) {
+                    logContent.textContent += '\n✅ 更新成功！页面将在 3 秒后刷新...';
+                    setTimeout(() => location.reload(), 3000);
+                } else {
+                    logContent.textContent += '\n❌ 更新失败，请查看日志排查问题。';
+                }
+            } catch (e) {
+                logContent.textContent += '\n❌ 更新失败：' + e;
+            } finally {
+                document.getElementById('update-btn').disabled = false;
+                document.getElementById('do-update-btn').disabled = false;
+            }
+        }
+
+        // 页面加载时自动检查更新
+        checkUpdates();
+
+        // 每 10 分钟自动检查一次
+        setInterval(checkUpdates, 600000);
+    </script>
+</body>
+</html>
