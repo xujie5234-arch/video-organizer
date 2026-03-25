@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📂 文件夹浏览 - Media Organizer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 20px; }
+        .nav { display: flex; gap: 10px; margin-bottom: 20px; }
+        .nav a { padding: 10px 20px; background: white; border-radius: 5px; text-decoration: none; color: #333; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .nav a:hover { background: #667eea; color: white; }
+        .grid { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
+        .panel { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .folder-tree { max-height: 600px; overflow-y: auto; }
+        .folder-item { padding: 10px; cursor: pointer; border-radius: 5px; margin-bottom: 5px; }
+        .folder-item:hover { background: #f0f0f0; }
+        .folder-item.active { background: #667eea; color: white; }
+        .folder-icon { margin-right: 8px; }
+        .file-list { max-height: 600px; overflow-y: auto; }
+        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
+        .file-item:last-child { border-bottom: none; }
+        .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-size { color: #666; margin: 0 15px; }
+        .btn { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-success { background: #48bb78; color: white; }
+        .btn-sm { padding: 5px 10px; font-size: 0.85em; }
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .empty { text-align: center; padding: 40px; color: #999; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📂 文件夹浏览</h1>
+            <p>选择文件夹并批量分类其中的文件</p>
+        </div>
+
+        <div class="nav">
+            <a href="/">📊 概览</a>
+            <a href="/files">📁 文件管理</a>
+            <a href="/folders" style="background: #667eea; color: white;">📂 文件夹</a>
+            <a href="/config">⚙️ 配置</a>
+            <a href="/logs">📋 日志</a>
+        </div>
+
+        <div class="grid">
+            <div class="panel">
+                <h2>📁 文件夹</h2>
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 15px;">点击文件夹查看文件</p>
+                <div class="folder-tree" id="folder-tree">
+                    <div class="loading">加载中...</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2 id="current-folder">选择文件夹</h2>
+                <div style="margin-bottom: 15px;">
+                    <button class="btn btn-success" id="batch-classify-btn" onclick="batchClassify()" style="display: none;">
+                        📂 批量分类此文件夹
+                    </button>
+                </div>
+                <div class="file-list" id="file-list">
+                    <div class="empty">点击左侧文件夹查看文件</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFolder = null;
+        let selectedFiles = [];
+
+        // 加载文件夹列表
+        async function loadFolders() {
+            try {
+                const res = await fetch('/api/folders');
+                const data = await res.json();
+                
+                const tree = document.getElementById('folder-tree');
+                if (data.folders && data.folders.length > 0) {
+                    tree.innerHTML = data.folders.map(folder => `
+                        <div class="folder-item" onclick="loadFolder('${folder}', this)">
+                            <span class="folder-icon">📁</span>
+                            ${folder}
+                        </div>
+                    `).join('');
+                } else {
+                    tree.innerHTML = '<div class="empty">没有找到文件夹</div>';
+                }
+            } catch (e) {
+                document.getElementById('folder-tree').innerHTML = '<div class="empty">加载失败：' + e + '</div>';
+            }
+        }
+
+        // 加载文件夹内容
+        async function loadFolder(path, element) {
+            // 更新选中状态
+            document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('active'));
+            if (element) element.classList.add('active');
+            
+            currentFolder = path;
+            document.getElementById('current-folder').textContent = path;
+            document.getElementById('batch-classify-btn').style.display = 'inline-block';
+            
+            const list = document.getElementById('file-list');
+            list.innerHTML = '<div class="loading">加载中...</div>';
+            
+            try {
+                const res = await fetch(`/api/folders/${encodeURIComponent(path)}`);
+                const data = await res.json();
+                
+                if (data.files && data.files.length > 0) {
+                    selectedFiles = data.files;
+                    list.innerHTML = data.files.map(f => `
+                        <div class="file-item">
+                            <span class="file-name" title="${f.name}">🎬 ${f.name}</span>
+                            <span class="file-size">${(f.size / 1024 / 1024).toFixed(1)} MB</span>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<div class="empty">此文件夹没有视频文件</div>';
+                }
+            } catch (e) {
+                list.innerHTML = '<div class="empty">加载失败：' + e + '</div>';
+            }
+        }
+
+        // 批量分类
+        async function batchClassify() {
+            if (!currentFolder || !selectedFiles.length) return;
+            
+            if (!confirm(`确定要批量分类 ${selectedFiles.length} 个文件吗？`)) return;
+            
+            const btn = document.getElementById('batch-classify-btn');
+            btn.disabled = true;
+            btn.textContent = '分类中...';
+            
+            let success = 0, errors = 0;
+            
+            for (const file of selectedFiles) {
+                try {
+                    const res = await fetch('/api/classify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path: file.path })
+                    });
+                    const result = await res.json();
+                    if (result.action === 'moved') success++;
+                    else errors++;
+                } catch (e) {
+                    errors++;
+                }
+            }
+            
+            alert(`分类完成！\n成功：${success}\n跳过/错误：${errors}`);
+            btn.disabled = false;
+            btn.textContent = '📂 批量分类此文件夹';
+            loadFolder(currentFolder, document.querySelector('.folder-item.active'));
+        }
+
+        // 页面加载
+        loadFolders();
+    </script>
+</body>
+</html>

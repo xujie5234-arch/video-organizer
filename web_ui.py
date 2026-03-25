@@ -47,6 +47,16 @@ def config_page():
     """配置管理页面"""
     return render_template('config.html')
 
+@app.route('/folders')
+def folders_page():
+    """文件夹浏览页面"""
+    return render_template('folders.html')
+
+@app.route('/logs')
+def logs_page():
+    """运行日志页面"""
+    return render_template('logs.html')
+
 
 @app.route('/files')
 def files():
@@ -158,6 +168,60 @@ def api_search():
     db = MediaDatabase('/app/data/media.db')
     results = db.search(keyword)
     return jsonify({'total': len(results), 'files': results[:100]})
+
+
+@app.route('/api/folders')
+def api_folders():
+    """获取文件夹列表"""
+    import subprocess
+    try:
+        # 列出源目录下的所有文件夹
+        result = subprocess.run(
+            ['find', SOURCE_DIR, '-maxdepth', '2', '-type', 'd'],
+            capture_output=True, text=True, timeout=10
+        )
+        folders = [f for f in result.stdout.strip().split('\n') if f]
+        return jsonify({'folders': folders})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/folders/<path:folder_path>')
+def api_folder_files(folder_path):
+    """获取指定文件夹下的文件"""
+    import subprocess
+    try:
+        folder = '/' + folder_path  # 重建绝对路径
+        result = subprocess.run(
+            ['find', folder, '-maxdepth', '1', '-type', 'f', '-name', '*.mp4', '-o', '-name', '*.mkv', '-o', '-name', '*.avi'],
+            capture_output=True, text=True, timeout=10
+        )
+        files = []
+        for f in result.stdout.strip().split('\n'):
+            if f:
+                stat_result = subprocess.run(['stat', '-c', '%s', f], capture_output=True, text=True)
+                size = int(stat_result.stdout.strip()) if stat_result.returncode == 0 else 0
+                files.append({'path': f, 'name': os.path.basename(f), 'size': size})
+        return jsonify({'total': len(files), 'files': files})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/logs')
+def api_logs():
+    """获取 Docker 容器日志"""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ['docker', 'logs', 'media-organizer', '--tail', '100'],
+            capture_output=True, text=True, timeout=10
+        )
+        return jsonify({
+            'stdout': result.stdout,
+            'stderr': result.stderr
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
