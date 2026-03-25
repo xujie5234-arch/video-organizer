@@ -42,6 +42,11 @@ def update_page():
     """更新管理页面"""
     return render_template('update.html')
 
+@app.route('/config')
+def config_page():
+    """配置管理页面"""
+    return render_template('config.html')
+
 
 @app.route('/files')
 def files():
@@ -129,6 +134,13 @@ def api_get_config():
     """获取配置"""
     cfg = load_config()
     return jsonify(cfg)
+
+@app.route('/api/config', methods=['PUT'])
+def api_update_config():
+    """更新配置"""
+    new_config = request.json
+    save_config(new_config)
+    return jsonify({'status': 'ok'})
 
 
 @app.route('/api/config', methods=['PUT'])
