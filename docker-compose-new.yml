@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  magnet-crawler:
+    image: shutu736/magnet-crawler:latest
+    container_name: magnet-crawler
+    restart: unless-stopped
+    
+    ports:
+      - "8080:8080"
+    
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./downloads:/downloads
+    
+    environment:
+      - TZ=Asia/Shanghai
+      - CD2_URL=http://192.168.31.74:19798
+      - CLASSIFY_ENABLED=true
+      - AUTO_CLASSIFY=false
+      - DB_PATH=/app/data/magnet.db
+    
+    depends_on:
+      - aria2
+    
+    networks:
+      - magnet-network
+
+  aria2:
+    image: p3terx/aria2-pro:latest
+    container_name: aria2
+    restart: unless-stopped
+    
+    ports:
+      - "6800:6800"
+    
+    volumes:
+      - ./aria2/config:/config
+      - ./downloads:/downloads
+    
+    environment:
+      - RPC_SECRET=your_secret_here
+    
+    networks:
+      - magnet-network
+
+networks:
+  magnet-network:
+    driver: bridge
