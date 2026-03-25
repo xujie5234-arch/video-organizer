@@ -32,10 +32,8 @@ def save_config(config):
 
 @app.route('/')
 def index():
-    """首页 - 显示统计信息"""
-    db = MediaDatabase('/app/data/media.db')
-    stats = db.get_stats()
-    return render_template('index.html', stats=stats)
+    """首页 - 仪表盘"""
+    return render_template('dashboard.html')
 
 @app.route('/update')
 def update_page():

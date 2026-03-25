@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 仪表盘 - Media Organizer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: #0d1117; 
+            color: #c9d1d9;
+        }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        
+        /* 顶部导航 */
+        .navbar { 
+            background: #161b22; 
+            padding: 15px 20px; 
+            margin-bottom: 20px;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar h1 { color: #58a6ff; font-size: 1.5em; }
+        .nav-links { display: flex; gap: 10px; }
+        .nav-links a { 
+            padding: 8px 16px; 
+            color: #c9d1d9; 
+            text-decoration: none; 
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .nav-links a:hover, .nav-links a.active { 
+            background: #21262d; 
+            color: #58a6ff;
+        }
+        
+        /* 统计卡片 */
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 20px; 
+            margin-bottom: 20px; 
+        }
+        .stat-card { 
+            background: #161b22; 
+            border: 1px solid #30363d;
+            border-radius: 8px; 
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .stat-icon { 
+            width: 50px; 
+            height: 50px; 
+            border-radius: 10px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            font-size: 1.5em;
+        }
+        .stat-icon.purple { background: linear-gradient(135deg, #8b5cf6, #6366f1); }
+        .stat-icon.pink { background: linear-gradient(135deg, #ec4899, #f43f5e); }
+        .stat-icon.blue { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+        .stat-icon.green { background: linear-gradient(135deg, #10b981, #059669); }
+        .stat-info h3 { font-size: 2em; color: #f0f6fc; margin-bottom: 5px; }
+        .stat-info p { color: #8b949e; font-size: 0.9em; }
+        
+        /* 图表区域 */
+        .charts-grid { 
+            display: grid; 
+            grid-template-columns: 2fr 1fr; 
+            gap: 20px; 
+            margin-bottom: 20px; 
+        }
+        .chart-card { 
+            background: #161b22; 
+            border: 1px solid #30363d;
+            border-radius: 8px; 
+            padding: 20px;
+        }
+        .chart-card h3 { color: #f0f6fc; margin-bottom: 15px; }
+        
+        /* 文件表格 */
+        .table-card { 
+            background: #161b22; 
+            border: 1px solid #30363d;
+            border-radius: 8px; 
+            overflow: hidden;
+        }
+        .table-header { 
+            padding: 20px; 
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .table-header h3 { color: #f0f6fc; }
+        .btn { 
+            padding: 8px 16px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: 500;
+        }
+        .btn-primary { background: #238636; color: white; }
+        .btn-primary:hover { background: #2ea043; }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th { 
+            background: #0d1117; 
+            padding: 12px 15px; 
+            text-align: left; 
+            color: #8b949e;
+            font-weight: 500;
+            border-bottom: 1px solid #30363d;
+        }
+        td { 
+            padding: 12px 15px; 
+            border-bottom: 1px solid #21262d;
+        }
+        tr:hover { background: #21262d; }
+        .tag { 
+            padding: 4px 10px; 
+            border-radius: 12px; 
+            font-size: 0.85em;
+            display: inline-block;
+        }
+        .tag-jp { background: rgba(236, 72, 153, 0.2); color: #f472b6; }
+        .tag-cn { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .tag-west { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .tag-kr { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+        .tag-other { background: rgba(139, 148, 158, 0.2); color: #9ca3af; }
+        
+        /* 饼图模拟 */
+        .pie-chart { 
+            width: 200px; 
+            height: 200px; 
+            border-radius: 50%; 
+            background: conic-gradient(
+                #8b5cf6 0deg 120deg,
+                #ec4899 120deg 180deg,
+                #3b82f6 180deg 240deg,
+                #10b981 240deg 300deg,
+                #f59e0b 300deg 360deg
+            );
+            margin: 20px auto;
+        }
+        .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.85em; }
+        .legend-color { width: 12px; height: 12px; border-radius: 3px; }
+        
+        /* 趋势图模拟 */
+        .trend-chart { 
+            height: 200px; 
+            display: flex; 
+            align-items: flex-end; 
+            gap: 10px; 
+            padding: 20px 0;
+        }
+        .trend-bar { 
+            flex: 1; 
+            background: linear-gradient(to top, #3b82f6, #60a5fa); 
+            border-radius: 4px 4px 0 0;
+            opacity: 0.8;
+            transition: all 0.3s;
+        }
+        .trend-bar:hover { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>🎬 Media Organizer</h1>
+        <div class="nav-links">
+            <a href="/" class="active">📊 仪表盘</a>
+            <a href="/cd2">☁️ 115 整理</a>
+            <a href="/files">📁 文件管理</a>
+            <a href="/config">⚙️ 配置</a>
+            <a href="/logs">📋 日志</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 统计卡片 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon purple">📁</div>
+                <div class="stat-info">
+                    <h3 id="total-files">0</h3>
+                    <p>总文件数</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon pink">🆕</div>
+                <div class="stat-info">
+                    <h3 id="today-new">0</h3>
+                    <p>今日新增</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon blue">🏷️</div>
+                <div class="stat-info">
+                    <h3 id="total-categories">0</h3>
+                    <p>分类总数</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green">✅</div>
+                <div class="stat-info">
+                    <h3 id="success-rate">0%</h3>
+                    <p>整理成功率</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 图表 -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>📈 近期整理趋势</h3>
+                <div class="trend-chart" id="trend-chart"></div>
+            </div>
+            <div class="chart-card">
+                <h3>🥧 分类统计</h3>
+                <div class="pie-chart"></div>
+                <div class="legend" id="category-legend"></div>
+            </div>
+        </div>
+
+        <!-- 最近资源 -->
+        <div class="table-card">
+            <div class="table-header">
+                <h3>📋 最近资源</h3>
+                <button class="btn btn-primary" onclick="scanAndClassify()">🚀 一键扫描并分类</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>番号</th>
+                        <th>标题</th>
+                        <th>分类</th>
+                        <th>大小</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="file-table">
+                    <tr><td colspan="5" style="text-align:center;color:#8b949e;">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 加载统计数据
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+                
+                document.getElementById('total-files').textContent = data.total_files || 0;
+                document.getElementById('today-new').textContent = data.today_new || 0;
+                document.getElementById('total-categories').textContent = Object.keys(data.by_category || {}).length;
+                document.getElementById('success-rate').textContent = (data.success_rate || 0) + '%';
+                
+                // 更新分类图例
+                const legend = document.getElementById('category-legend');
+                if (data.by_category) {
+                    const colors = {'日本': '#ec4899', '国产': '#3b82f6', '欧美': '#10b981', '韩国': '#8b5cf6', '其他': '#f59e0b'};
+                    legend.innerHTML = Object.entries(data.by_category).map(([name, count]) => `
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: ${colors[name] || '#8b949e'}"></div>
+                            <span>${name}: ${count}</span>
+                        </div>
+                    `).join('');
+                }
+                
+                // 更新趋势图
+                updateTrendChart();
+            } catch (e) {
+                console.error('加载统计失败:', e);
+            }
+        }
+
+        // 更新趋势图
+        function updateTrendChart() {
+            const chart = document.getElementById('trend-chart');
+            const data = [65, 78, 52, 89, 73, 45, 82]; // 示例数据
+            chart.innerHTML = data.map(val => 
+                `<div class="trend-bar" style="height: ${val}%"></div>`
+            ).join('');
+        }
+
+        // 加载文件列表
+        async function loadFiles() {
+            try {
+                const res = await fetch('/api/cd2/files?path=/115');
+                const data = await res.json();
+                
+                const tbody = document.getElementById('file-table');
+                if (data.files && data.files.length > 0) {
+                    tbody.innerHTML = data.files.slice(0, 10).map(f => {
+                        const category = detectCategory(f.name);
+                        const tagClass = getTagClass(category);
+                        return `
+                            <tr>
+                                <td style="font-family:monospace;color:#58a6ff;">${extractId(f.name)}</td>
+                                <td>${f.name}</td>
+                                <td><span class="tag tag-${tagClass}">${category}</span></td>
+                                <td>${formatSize(f.size)}</td>
+                                <td><button class="btn btn-primary" style="padding:4px 10px;font-size:0.85em;" onclick="classifyFile('${f.path}')">分类</button></td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#8b949e;">暂无文件</td></tr>';
+                }
+            } catch (e) {
+                console.error('加载文件失败:', e);
+            }
+        }
+
+        // 检测分类
+        function detectCategory(filename) {
+            const lower = filename.toLowerCase();
+            if (/日本|jav|japanese|ssis|ipx|abw/.test(lower)) return '日本';
+            if (/国产|中文|chinese/.test(lower)) return '国产';
+            if (/欧美|western|american/.test(lower)) return '欧美';
+            if (/韩国|korean/.test(lower)) return '韩国';
+            return '其他';
+        }
+
+        function getTagClass(category) {
+            const map = {'日本': 'jp', '国产': 'cn', '欧美': 'west', '韩国': 'kr'};
+            return map[category] || 'other';
+        }
+
+        function extractId(filename) {
+            const match = filename.match(/[A-Z]{2,}-?\d{3,}/i);
+            return match ? match[0] : '未知';
+        }
+
+        function formatSize(bytes) {
+            if (!bytes) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // 一键扫描分类
+        async function scanAndClassify() {
+            if (!confirm('确定要扫描并自动分类所有文件吗？')) return;
+            
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '处理中...';
+            
+            try {
+                const res = await fetch('/api/cd2/classify-all', {method: 'POST'});
+                const data = await res.json();
+                alert(`分类完成！\n成功：${data.success}\n失败：${data.errors}`);
+                loadStats();
+                loadFiles();
+            } catch (e) {
+                alert('分类失败：' + e);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🚀 一键扫描并分类';
+            }
+        }
+
+        // 分类单个文件
+        async function classifyFile(path) {
+            try {
+                const res = await fetch('/api/cd2/classify', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({file_paths: [path]})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('分类成功！');
+                    loadFiles();
+                } else {
+                    alert('分类失败：' + (data.error || '未知错误'));
+                }
+            } catch (e) {
+                alert('分类失败：' + e);
+            }
+        }
+
+        // 页面加载
+        loadStats();
+        loadFiles();
+        
+        // 每 30 秒刷新统计
+        setInterval(loadStats, 30000);
+    </script>
+</body>
+</html>
