@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  media-organizer:
+    image: media-organizer:latest
+    container_name: media-organizer
+    restart: unless-stopped
+    
+    # 卷映射
+    volumes:
+      # 源目录：你的 115 网盘挂载路径（请根据实际情况修改）
+      - /mnt/115/videos:/source:ro
+      
+      # 目标目录：分类后存放路径
+      - /mnt/nas/media:/target
+      
+      # 配置文件
+      - ./data/config:/app/config
+      
+      # 数据库持久化
+      - ./data/db:/app/data
+    
+    # 环境变量
+    environment:
+      - TZ=Asia/Shanghai
+      - SOURCE_DIR=/source
+      - TARGET_DIR=/target
+    
+    # 日志
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

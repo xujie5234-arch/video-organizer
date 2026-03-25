@@ -13,6 +13,8 @@
 
 ## 快速开始
 
+### 本地运行
+
 ```bash
 # 安装依赖
 pip install -r requirements.txt
@@ -26,6 +28,21 @@ python main.py
 
 # 预览模式（不实际移动文件）
 python main.py --dry-run
+```
+
+### Docker 部署（飞牛 NAS）
+
+详见 [DEPLOY_FNNAS.md](DEPLOY_FNNAS.md)
+
+```bash
+# 构建镜像
+docker build -t media-organizer .
+
+# 使用 docker-compose 运行
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f
 ```
 
 ## 目录结构
