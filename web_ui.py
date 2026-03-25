@@ -143,14 +143,6 @@ def api_update_config():
     return jsonify({'status': 'ok'})
 
 
-@app.route('/api/config', methods=['PUT'])
-def api_update_config():
-    """更新配置"""
-    new_config = request.json
-    save_config(new_config)
-    return jsonify({'status': 'ok'})
-
-
 @app.route('/api/stats')
 def api_stats():
     """获取统计信息"""

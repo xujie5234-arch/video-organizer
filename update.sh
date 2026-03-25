@@ -35,7 +35,9 @@ fi
 # 5. 重新创建容器
 echo "🔄 重新创建容器..."
 cd "$DEPLOY_DIR"
-docker-compose up -d --build
+docker compose up -d --build 2>/dev/null || docker-compose up -d --build 2>/dev/null || {
+    echo "⚠️  docker compose 不可用，请手动在飞牛 Docker 管理界面重启容器"
+}
 
 # 6. 清理旧备份（保留最近 3 个）
 echo "🧹 清理旧备份..."
