@@ -1,0 +1,76 @@
+# Media Organizer 配置文件
+
+# ============ 目录配置 ============
+# 源目录：你的 115 网盘挂载路径
+source_dir: /mnt/115/videos
+
+# 目标目录：分类后的文件存放路径
+target_dir: /mnt/nas/media/sorted
+
+# 操作模式：move(移动) | link(软链接) | copy(复制)
+mode: link
+
+# ============ 文件配置 ============
+# 支持的视频格式
+video_extensions:
+  - .mp4
+  - .mkv
+  - .avi
+  - .mov
+  - .wmv
+  - .flv
+  - .webm
+  - .m4v
+
+# 忽略的文件夹
+ignore_folders:
+  - "@eaDir"
+  - ".DS_Store"
+  - "@Recycle"
+
+# ============ 分类规则 ============
+# 按地区/类型分类
+categories:
+  - name: 国产
+    keywords: [国产，中文，chinese, china, 国产自拍]
+    target: 国产
+    
+  - name: 日本
+    keywords: [日本，jav, japanese, 日系，HD-00, SSIS, IPX, ABW]
+    target: 日本
+    
+  - name: 欧美
+    keywords: [欧美，western, american, europe, 欧美]
+    target: 欧美
+    
+  - name: 韩国
+    keywords: [韩国，korean, korea, 韩系]
+    target: 韩国
+    
+  - name: 其他
+    keywords: []
+    target: 其他
+
+# ============ 标签系统 ============
+# 可以添加演员、系列、工作室等标签
+tags:
+  # 演员标签示例
+  - name: 演员 A
+    keywords: [演员名，别名]
+    
+  # 系列标签示例
+  - name: 系列 X
+    keywords: [系列名，S01, S02]
+
+# ============ 高级配置 ============
+# 数据库路径
+database: ./media.db
+
+# 日志级别：DEBUG | INFO | WARNING | ERROR
+log_level: INFO
+
+# 是否生成 NFO 文件（Kodi/Emby 兼容）
+generate_nfo: false
+
+# 并发线程数
+max_workers: 4
